@@ -122,6 +122,60 @@ app.get("/bookings/:customerId", function (req, res) {
     .catch((e) => console.error(e));
 });
 
+
+app.patch('/customers/:customerId', function (req, res) {
+  let customer_id = parseInt(req.params.customerId)
+  let { name, email, address, city, postcode, country } = req.body
+  let values = [name, email, address, city, postcode, country, customer_id]
+  const selectCustomerById = `SELECT * FROM customers WHERE id = $1`;
+  const updateCustomer = `PATCH customers SET name = $1, email = $2, address = $3, city = $4, postcode = $5, country = $6 WHERE id = $7`;
+
+  pool.connect((err, client, release) => {
+      if (err) {
+          res.send('Error acquiring client')
+      }
+      client.query(selectCustomerById, [customer_id], (err, result) => {
+          if (err) {
+              res.send('Error excecuting query.')
+          } 
+          if (result.rowCount < 1) {
+              res.send('The customer with this id does not exist.')
+          }
+          client.query(updateCustomer, values, (err, result) => {
+              res.status(201).send('The customer was updated.')
+          });
+      });
+  });
+});
+
+app.delete("/customers/:customerId", function (req, res) {
+  const customerId = req.params.customerId;
+
+  pool
+    .query("DELETE FROM bookings WHERE customer_id=$1", [customerId])
+    .then(() => {
+      pool
+        .query("DELETE FROM customers WHERE id=$1", [customerId])
+        .then(() => res.send(`Customer ${customerId} deleted!`))
+        .catch((e) => console.error(e));
+    })
+    .catch((e) => console.error(e));
+});
+
+app.delete("/hotels/:hotelId", function (req, res) {
+  const hotelId = req.params.hotelId;
+
+  pool
+    .query("DELETE FROM bookings WHERE hotel_id=$1", [hotelId])
+    .then(() => {
+      pool
+        .query("DELETE FROM hotels WHERE id=$1", [hotelId])
+        .then(() => res.send(`Hotel ${hotelId} deleted!`))
+        .catch((e) => console.error(e));
+    })
+    .catch((e) => console.error(e));
+});
+
 app.listen(3000, function () {
   console.log("Server is listening on port 3000. Ready to accept requests!");
 });
